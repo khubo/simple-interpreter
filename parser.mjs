@@ -6,6 +6,38 @@ import Lexer, { tokens } from "./lexer.mjs";
 
 class AST {}
 
+class Program extends AST {
+  constructor(name, block) {
+    super();
+    this.name = name;
+    this.block = block;
+  }
+}
+
+class Block extends AST {
+  constructor(declarations, compoundStatement) {
+    super();
+    this.declarations = declarations;
+    this.compoundStatement = compoundStatement;
+  }
+}
+
+class VarDecl extends AST {
+  constructor(varNode, type) {
+    super();
+    this.varNode = varNode;
+    this.type = type;
+  }
+}
+
+class Type extends AST {
+  constructor(token) {
+    super();
+    this.token = token;
+    this.value = token.value;
+  }
+}
+
 class BinOp extends AST {
   constructor(left, op, right) {
     super();
@@ -80,15 +112,70 @@ class Parser {
     if (this.currentToken.type === tokenType) {
       this.currentToken = this.lexer.getNextToken();
     } else {
+      console.log(`expected ${tokenType} but got ${this.currentToken.type}`);
       this.error();
     }
   }
 
-  // program: compound_statement DOT
+  // program: PROGRAM variable SEMI block DOT
   program() {
-    const node = this.compoundStatement();
+    this.eat(tokens.PROGRAM);
+    const varNode = this.variable();
+    const progNode = varNode.value;
+    this.eat(tokens.semi);
+    const blockNode = this.block();
+    const programNode = new Program(progNode, blockNode);
     this.eat(tokens.dot);
-    return node;
+    return programNode;
+  }
+
+  // block: declarations compound_statement
+  block() {
+    const declarationNode = this.declarations();
+    const compoundNode = this.compoundStatement();
+    return new Block(declarationNode, compoundNode);
+  }
+
+  // declarations: VAR (variable_declaration SEMI)+ | EMPTY
+  declarations() {
+    let declarationList = [];
+    // starts with a var followed by bunch of var declarations
+    if (this.currentToken.type === tokens.VAR) {
+      this.eat(tokens.VAR);
+      while (this.currentToken.type === tokens.ID) {
+        declarationList = [...declarationList, ...this.variableDeclaration()];
+        this.eat(tokens.semi);
+      }
+    }
+    return declarationList;
+  }
+
+  // variableDeclaration: ID (COMMA ID)* COLON type_spec
+  variableDeclaration() {
+    const varNodes = [new Var(this.currentToken)];
+    this.eat(tokens.ID);
+    while (this.currentToken.type === tokens.comma) {
+      this.eat(tokens.comma);
+      varNodes.push(new Var(this.currentToken));
+      this.eat(tokens.ID);
+    }
+
+    this.eat(tokens.colon);
+
+    const typeNode = this.typeSpec();
+    const varDeclarations = varNodes.map((node) => new VarDecl(node, typeNode));
+    return varDeclarations;
+  }
+
+  // type_spec: INTEGER | REAL
+  typeSpec() {
+    const token = this.currentToken;
+    if (this.currentToken.type === tokens.INTEGER) {
+      this.eat(tokens.INTEGER);
+    } else if (this.currentToken.type === tokens.REAL) {
+      this.eat(tokens.REAL);
+    }
+    return new Type(token);
   }
 
   // compound_statement: BEGIN statement_list END
@@ -137,6 +224,7 @@ class Parser {
     return node;
   }
 
+  // factor: PLUS factor | MINUS factor | INTEGER_CONST | REAL_CONST | LPAREN expr RPAREN | variable
   factor() {
     const token = this.currentToken;
 
@@ -150,8 +238,13 @@ class Parser {
       return new UnaryOp(token, this.factor());
     }
 
-    if (token.type === tokens.integer) {
-      this.eat(tokens.integer);
+    if (token.type === tokens.integerConst) {
+      this.eat(tokens.integerConst);
+      return new Num(token);
+    }
+
+    if (token.type === tokens.realConst) {
+      this.eat(tokens.realConst);
       return new Num(token);
     }
 
@@ -166,17 +259,21 @@ class Parser {
     return node;
   }
 
+  // term: factor ((MUL | INTEGER_DIV | FLOAT_DIV) factor)*
   term() {
     let node = this.factor();
     while (
       this.currentToken.type === tokens.mul ||
-      this.currentToken.type === tokens.div
+      this.currentToken.type === tokens.DIV ||
+      this.currentToken.type === tokens.floatDiv
     ) {
       const token = this.currentToken;
       if (token.type === tokens.mul) {
         this.eat(tokens.mul);
-      } else if (token.type === tokens.div) {
-        this.eat(tokens.div);
+      } else if (token.type === tokens.DIV) {
+        this.eat(tokens.DIV);
+      } else if (token.type === tokens.floatDiv) {
+        this.eat(tokens.floatDiv);
       }
 
       node = new BinOp(node, token, this.factor());
