@@ -5,7 +5,6 @@ export const tokens = {
   plus: "PLUS",
   minus: "MINUS",
   EOF: "EOF",
-  div: "DIV",
   mul: "MUL",
   lparen: "(",
   rparen: ")",
@@ -15,6 +14,16 @@ export const tokens = {
   dot: "DOT",
   BEGIN: "BEGIN",
   END: "END",
+  PROGRAM: "PROGRAM",
+  VAR: "VAR",
+  DIV: "DIV",
+  INTEGER: "INTEGER",
+  REAL: "REAL",
+  integerConst: "INTEGER_CONST",
+  realConst: "REAL_CONST",
+  colon: "COLON",
+  comma: "COMMA",
+  floatDiv: "/",
 };
 
 class Token {
@@ -30,6 +39,11 @@ class Token {
 const RESERVED_KEYWORDS = {
   BEGIN: "BEGIN",
   END: "END",
+  PROGRAM: "PROGRAM",
+  VAR: "VAR",
+  DIV: "DIV",
+  INTEGER: "INTEGER",
+  REAL: "REAL",
 };
 
 ////////////////////////////////////////////////
@@ -44,6 +58,14 @@ class Lexer {
 
   error(msg) {
     throw new Error(`invalid character ${msg}`);
+  }
+
+  // TODO: write test for this
+  skipComment() {
+    while (this.currentChar !== "}") {
+      this.advance();
+    }
+    this.advance();
   }
 
   peek() {
@@ -81,14 +103,28 @@ class Lexer {
       this.advance();
     }
   }
-  integer() {
+
+  // returns integer or float
+  number() {
     let result = "";
     while (this.currentChar && this.currentChar.match(/[0-9]/)) {
       result += this.currentChar;
       this.advance();
     }
-    return new Token(tokens.integer, parseInt(result));
+
+    if (this.currentChar === ".") {
+      result += this.currentChar;
+      this.advance();
+      while (this.currentChar && this.currentChar.match(/[0-9]/)) {
+        result += this.currentChar;
+        this.advance();
+      }
+      return new Token(tokens.realConst, parseFloat(result));
+    }
+
+    return new Token(tokens.integerConst, parseInt(result));
   }
+
   getNextToken() {
     while (this.currentChar) {
       // remove white spaces
@@ -97,6 +133,11 @@ class Lexer {
         continue;
       }
 
+      if (this.currentChar === "{") {
+        this.advance();
+        this.skipComment();
+        continue;
+      }
       // check for identifiers or reserved keywords
       if (this.currentChar.match(/[a-zA-Z_]/)) {
         return this._id();
@@ -121,12 +162,22 @@ class Lexer {
       }
 
       if (this.currentChar.match(/[0-9]/)) {
-        return this.integer();
+        return this.number();
+      }
+
+      if (this.currentChar === ":") {
+        this.advance();
+        return new Token(tokens.colon, ":");
+      }
+
+      if (this.currentChar === ",") {
+        this.advance();
+        return new Token(tokens.comma, ",");
       }
 
       if (this.currentChar === "/") {
         this.advance();
-        return new Token(tokens.div, "/");
+        return new Token(tokens.floatDiv, "/");
       }
 
       if (this.currentChar === "*") {
