@@ -9,7 +9,7 @@ class NodeVisitor {
     return this[methodName] ? this[methodName](node) : this.genericVisit();
   }
 
-  genericVisit() {
+  genericVisit(node) {
     throw new Error(`No visit method for node ${node.constructor.name}`);
   }
 }
@@ -19,6 +19,20 @@ class Interpreter extends NodeVisitor {
     this.parser = parser;
     this.GLOBAL_SCOPE = {};
   }
+
+  visitProgram(node) {
+    this.visit(node.block);
+  }
+
+  visitBlock(node) {
+    for (const declaration of node.declarations) {
+      this.visit(declaration);
+    }
+    this.visit(node.compoundStatement);
+  }
+
+  visitVarDecl(node) {}
+  visitType(node) {}
 
   visitCompound(node) {
     for (const child of node.children) {
@@ -41,7 +55,9 @@ class Interpreter extends NodeVisitor {
       return this.visit(node.left) - this.visit(node.right);
     } else if (op === tokens.mul) {
       return this.visit(node.left) * this.visit(node.right);
-    } else if (op === tokens.div) {
+    } else if (op === tokens.DIV) {
+      return Math.floor(this.visit(node.left) / this.visit(node.right));
+    } else if (op === tokens.floatDiv) {
       return this.visit(node.left) / this.visit(node.right);
     }
   }

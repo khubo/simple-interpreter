@@ -50,9 +50,12 @@ BEGIN {Part10AST}
    a := 2;
    b := 10 * a + 10 * a DIV 4;
    y := 20 / 7 + 3.14;
+   c := 32 DIV 10;
 END.  {Part10AST}
 `);
 
 let parser = new Parser(lexer);
-console.log(JSON.stringify(parser.parse()));
-// let intp = new Interpreter(parser);
+// console.log(JSON.stringify(parser.parse()));
+let intp = new Interpreter(parser);
+intp.interpret();
+console.log(intp.GLOBAL_SCOPE);

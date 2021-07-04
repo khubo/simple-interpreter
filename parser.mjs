@@ -212,7 +212,7 @@ class Parser {
 
   statement() {
     let node;
-    console.log("this here inside statement", this.currentToken.type);
+
     if (this.currentToken.type === tokens.BEGIN) {
       node = this.compoundStatement();
     } else if (this.currentToken.type === tokens.ID) {
