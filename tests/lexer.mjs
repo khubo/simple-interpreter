@@ -45,3 +45,22 @@ test("# colon, comma, and divs", function (t) {
   t.equal(token.type, tokens.DIV);
   t.end();
 });
+
+test("#RESERVED keywords", function (t) {
+  const lexer = new Lexer(`BEGIN END PROGRAM VAR DIV INTEGER REAL`);
+  let token = lexer.getNextToken();
+  t.equal(token.type, tokens.BEGIN);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.END);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.PROGRAM);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.VAR);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.DIV);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.INTEGER);
+  token = lexer.getNextToken();
+  t.equal(token.type, tokens.REAL);
+  t.end();
+});
