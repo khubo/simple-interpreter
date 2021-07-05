@@ -71,6 +71,8 @@ export class SymbolTableBuilder extends NodeVisitor {
     this.visit(node.compoundStatement);
   }
 
+  visitProcedureDecl(node) {}
+
   visitProgram(node) {
     this.visit(node.block);
   }
@@ -188,6 +190,7 @@ class Interpreter extends NodeVisitor {
     }
     return val;
   }
+  visitProcedureDecl(node) {}
 
   visitNum(node) {
     return node.value;

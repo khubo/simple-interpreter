@@ -24,6 +24,7 @@ export const tokens = {
   colon: "COLON",
   comma: "COMMA",
   floatDiv: "/",
+  PROCEDURE: "PROCEDURE",
 };
 
 class Token {
@@ -44,6 +45,7 @@ const RESERVED_KEYWORDS = {
   DIV: "DIV",
   INTEGER: "INTEGER",
   REAL: "REAL",
+  PROCEDURE: "PROCEDURE",
 };
 
 ////////////////////////////////////////////////

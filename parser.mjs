@@ -22,6 +22,13 @@ class Block extends AST {
   }
 }
 
+class ProcedureDecl extends AST {
+  constructor(procName, blockNode) {
+    super();
+    this.procName = procName;
+    this.blockNode = blockNode;
+  }
+}
 class VarDecl extends AST {
   constructor(varNode, type) {
     super();
@@ -136,7 +143,7 @@ class Parser {
     return new Block(declarationNode, compoundNode);
   }
 
-  // declarations: VAR (variable_declaration SEMI)+ | EMPTY
+  // declarations: VAR (variable_declaration SEMI)+ | (PROCEDURE ID SEMI block SEMI)* | EMPTY
   declarations() {
     let declarationList = [];
     // starts with a var followed by bunch of var declarations
@@ -146,6 +153,17 @@ class Parser {
         declarationList = [...declarationList, ...this.variableDeclaration()];
         this.eat(tokens.semi);
       }
+    }
+
+    while (this.currentToken.type === "PROCEDURE") {
+      this.eat(tokens.PROCEDURE);
+      const procName = this.currentToken.name;
+      this.eat(tokens.ID);
+      this.eat(tokens.semi);
+      const blockNode = this.block();
+      const procDecl = new ProcedureDecl(procName, blockNode);
+      declarationList.push(procDecl);
+      this.eat(tokens.semi);
     }
     return declarationList;
   }
