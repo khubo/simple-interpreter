@@ -13,11 +13,120 @@ class NodeVisitor {
     throw new Error(`No visit method for node ${node.constructor.name}`);
   }
 }
-class Interpreter extends NodeVisitor {
-  constructor(parser) {
+
+///////////////////////////////////
+//   Symbol Table                //
+//////////////////////////////////
+class Symbol {
+  constructor(name, type = null) {
+    this.name = name;
+    this.type = type;
+  }
+}
+
+class BuiltinTypeSymbol extends Symbol {
+  constructor(name) {
+    super(name);
+  }
+}
+
+class VarSymbol extends Symbol {
+  constructor(name, type) {
+    super(name, type);
+  }
+}
+
+class SymbolTable {
+  constructor() {
+    this._symbols = {};
+    this._init_builtins();
+  }
+
+  _init_builtins() {
+    this.define(new BuiltinTypeSymbol("INTEGER"));
+    this.define(new BuiltinTypeSymbol("REAL"));
+  }
+
+  define(symbol) {
+    this._symbols[symbol.name] = symbol;
+  }
+
+  lookup(name) {
+    const symbol = this._symbols[name];
+    return symbol;
+  }
+}
+
+export class SymbolTableBuilder extends NodeVisitor {
+  constructor() {
     super();
-    this.parser = parser;
-    this.GLOBAL_SCOPE = {};
+    this.symtab = new SymbolTable();
+  }
+
+  visitBlock(node) {
+    for (const declaration of node.declarations) {
+      this.visit(declaration);
+    }
+
+    this.visit(node.compoundStatement);
+  }
+
+  visitProgram(node) {
+    this.visit(node.block);
+  }
+
+  visitBinOp(node) {
+    this.visit(node.left);
+    this.visit(node.right);
+  }
+
+  visitNum(node) {}
+
+  visitUnaryOp(node) {
+    this.visit(node.expr);
+  }
+
+  visitCompound(node) {
+    for (const child of node.children) {
+      this.visit(child);
+    }
+  }
+
+  visitAssign(node) {
+    const varName = node.left.value;
+    const varSymbol = this.symtab.lookup(varName);
+    if (!varSymbol) {
+      throw new Error(`${varName} not declared before use`);
+    }
+
+    this.visit(node.right);
+  }
+
+  visitVar(node) {
+    const varName = node.value;
+    const varSymbol = this.symtab.lookup(varName);
+
+    if (!varSymbol) {
+      throw new Error(`${varName} is not defined`);
+    }
+  }
+
+  visitNoOp(node) {}
+
+  visitVarDecl(node) {
+    const typeName = node.type.value;
+    const typeSymbol = this.symtab.lookup(typeName);
+    const varName = node.varNode.value;
+    const varSymbol = new VarSymbol(varName, typeSymbol);
+    this.symtab.define(varSymbol);
+  }
+}
+
+class Interpreter extends NodeVisitor {
+  constructor(tree) {
+    super();
+    this.tree = tree;
+    this.GLOBAL_MEMORY = {};
   }
 
   visitProgram(node) {
@@ -44,7 +153,7 @@ class Interpreter extends NodeVisitor {
 
   visitAssign(node) {
     const varName = node.left.value;
-    this.GLOBAL_SCOPE[varName] = this.visit(node.right);
+    this.GLOBAL_MEMORY[varName] = this.visit(node.right);
   }
 
   visitBinOp(node) {
@@ -73,7 +182,7 @@ class Interpreter extends NodeVisitor {
 
   visitVar(node) {
     const varName = node.value;
-    const val = this.GLOBAL_SCOPE[varName];
+    const val = this.GLOBAL_MEMORY[varName];
     if (!val) {
       throw new Error(`Variable ${varName} is not defined`);
     }
@@ -85,7 +194,7 @@ class Interpreter extends NodeVisitor {
   }
 
   interpret() {
-    return this.visit(this.parser.parse());
+    return this.tree ? this.visit(this.tree) : "";
   }
 }
 

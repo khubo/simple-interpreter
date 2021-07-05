@@ -1,6 +1,6 @@
 import Lexer, { tokens } from "./lexer.mjs";
 import Parser from "./parser.mjs";
-import Interpreter from "./interpreter.mjs";
+import Interpreter, { SymbolTableBuilder } from "./interpreter.mjs";
 /* 
     program : PROGRAM variable SEMI block DOT
 
@@ -41,21 +41,28 @@ import Interpreter from "./interpreter.mjs";
  */
 
 const lexer = new Lexer(`
-PROGRAM Part10AST;
+PROGRAM Part11;
 VAR
-   a, b : INTEGER;
-   y    : REAL;
+   number : INTEGER;
+   a, b   : INTEGER;
+   y      : REAL;
 
-BEGIN {Part10AST}
-   a := 2;
-   b := 10 * a + 10 * a DIV 4;
-   y := 20 / 7 + 3.14;
-   c := 32 DIV 10;
-END.  {Part10AST}
+BEGIN {Part11}
+   number := 2;
+   a := number ;
+   b := 10 * a + 10 * number DIV 4;
+   y := 20 / 7 + 3.14
+END.  {Part11}
 `);
 
 let parser = new Parser(lexer);
-// console.log(JSON.stringify(parser.parse()));
-let intp = new Interpreter(parser);
-intp.interpret();
-console.log(intp.GLOBAL_SCOPE);
+const tree = parser.parse();
+const symtabBuild = new SymbolTableBuilder();
+symtabBuild.visit(tree);
+console.log("----------------\n Symbtab contents");
+console.log(symtabBuild.symtab);
+
+const intp = new Interpreter(tree);
+const result = intp.interpret();
+console.log("\n\nglobal memory contents are\n\n", result);
+console.log(intp.GLOBAL_MEMORY);
